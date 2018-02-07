@@ -1,13 +1,40 @@
-sudo: required
-
-language: java
+before_cache:
+- rm -rf $HOME/CACHE; find $TRAVIS_BUILD_DIR -name .starts | while read line; do du
+  -sh $line;         DIR=$(dirname $HOME/CACHE$line); mkdir -p $DIR; cp -r $line $DIR;
+  done
+- find $TRAVIS_BUILD_DIR -name jdeps-cache | while read line; do du -sh $line;         DIR=$(dirname
+  $HOME/CACHE$line); mkdir -p $DIR; cp -r $line $DIR; done
+- echo CACHESIZE $(du -sk $HOME/CACHE)
 before_install:
-  - cd ci-dependencies
-  - curl -O https://openskywalking.github.io/skywalking-ci-assist/jars/ojdbc14-10.2.0.4.0.jar
-  - curl -O https://openskywalking.github.io/skywalking-ci-assist/jars/resin-4.0.41.jar
-  - cd ..
-
+- find $HOME/CACHE -name jdeps-cache | while read line; do du -sh $line;         DIR=$(dirname
+  ${line#$HOME/CACHE}); if [[ -d ${DIR#jdeps-cache/} ]]; then cp -r $line $DIR; fi;
+  done
+- find $HOME/CACHE -name .starts | while read line; do du -sh $line;         DIR=$(dirname
+  ${line#$HOME/CACHE}); if [[ -d ${DIR#.starts/} ]]; then cp -r $line $DIR; fi; done
+- cd ci-dependencies
+- curl -O https://openskywalking.github.io/skywalking-ci-assist/jars/ojdbc14-10.2.0.4.0.jar
+- curl -O https://openskywalking.github.io/skywalking-ci-assist/jars/resin-4.0.41.jar
+- cd ..
+before_script:
+- find $TRAVIS_BUILD_DIR -name .starts | while read line; do rm -rf $line; done
+- find $TRAVIS_BUILD_DIR -name jdeps-cache | while read line; do rm -rf $line; done
+- find $HOME/CACHE -name jdeps-cache | while read line; do du -sh $line;         DIR=$(dirname
+  ${line#$HOME/CACHE}); if [[ -d ${DIR#jdeps-cache/} ]]; then cp -r $line $DIR; fi;
+  done
+- find $HOME/CACHE -name .starts | while read line; do du -sh $line;         DIR=$(dirname
+  ${line#$HOME/CACHE}); if [[ -d ${DIR#.starts/} ]]; then cp -r $line $DIR; fi; done
+cache:
+  directories:
+  - $HOME/CACHE
 install:
-  - jdk_switcher use oraclejdk8
-  - mvn clean install --quiet jacoco:report coveralls:report
-
+- jdk_switcher use oraclejdk8
+- mvn clean install --quiet jacoco:report coveralls:report
+language: java
+script:
+- touch /tmp/NOW
+- echo GIBSTUDYSTART $(date)
+- mvn test -B
+- echo GIBSTUDYEND $(date)
+- cd $TRAVIS_BUILD_DIR
+- echo TESTNUM $(find . -name TEST-*.xml -newer /tmp/NOW | wc -l)
+sudo: required
